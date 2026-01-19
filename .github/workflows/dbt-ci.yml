@@ -36,39 +36,31 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Create dummy profiles.yml so dbt is satisfied
-      - name: Create dbt profiles directory
-        run: mkdir -p .ci_dbt
-
-      - name: Write lightweight profiles.yml
+      # Create minimal profiles.yml for dbt to function
+      - name: Create dbt profiles.yml
         run: |
+          mkdir -p .ci_dbt
           cat > .ci_dbt/profiles.yml <<EOF
           ae_stanley_tasks:
             target: dev
             outputs:
-              ci:
+              dev:
                 type: bigquery
                 method: oauth
-                project: fake-project
-                dataset: fake_dataset
+                project: dummy
+                dataset: dummy
                 location: US
                 threads: 1
           EOF
 
-      - name: Show profiles.yml
-        run: cat .ci_dbt/profiles.yml
-
-      # These commands do NOT hit BigQuery
-      - name: dbt debug (structure only)
-        run: dbt debug --config-dir
-
+      # Validate project structure (no warehouse access)
       - name: dbt parse
         run: dbt parse
 
       - name: dbt compile
         run: dbt compile
 
-      - name: dbt ls (validate graph)
+      - name: dbt ls
         run: dbt ls
 
       - name: SQLFluff lint
