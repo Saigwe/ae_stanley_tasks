@@ -47,7 +47,7 @@ jobs:
       - name: Write dbt profiles.yml
         run: |
           mkdir -p ~/.dbt
-          cat << 'EOF' > ~/.dbt/profiles.yml
+          cat << 'EOF' > $HOME/.dbt/profiles.yml
           ae_stanley_igwe_monzo:
             target: prod
             outputs:

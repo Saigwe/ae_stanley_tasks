@@ -141,6 +141,3 @@ macros:
         - improved_dev_performance_and_cost
       recommended_usage:
         - models/staging/*
-      examples:
-        - "{{ dev_limit('created_at', 30) }}"
-        - "{{ dev_limit('event_ts') }}"
