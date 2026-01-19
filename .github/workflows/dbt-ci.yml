@@ -55,13 +55,13 @@ jobs:
 
       # Validate project structure (no warehouse access)
       - name: dbt parse
-        run: dbt parse --no-hooks
+        run: dbt parse
 
       - name: dbt compile
-        run: dbt compile --no-hooks
+        run: dbt compile
 
       - name: dbt ls
-        run: dbt ls --no-hooks
+        run: dbt ls
 
       - name: SQLFluff lint
         run: sqlfluff lint models/
