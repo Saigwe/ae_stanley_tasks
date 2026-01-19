@@ -62,3 +62,5 @@ jobs:
 
       - name: SQLFluff lint
         run: sqlfluff lint models/ --dialect bigquery
+
+
