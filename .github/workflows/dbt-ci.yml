@@ -1,0 +1,42 @@
+name: dbt CI
+
+on:
+  pull_request:
+
+jobs:
+  dbt-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Download prod artifacts
+        run: |
+          mkdir artifacts
+          gsutil cp gs://dbt-artifacts-analytics-take-home-test/prod/manifest.json ./artifacts/
+
+      - name: SQL lint
+        run: |
+          sqlfluff lint models/
+
+      - name: dbt run (state-based)
+        run: |
+          dbt run --defer --state ./artifacts --select state:modified+
+
+      - name: dbt test (state-based)
+        run: |
+          dbt test --defer --state ./artifacts --select state:modified+
