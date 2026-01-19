@@ -44,7 +44,7 @@ jobs:
         run: |
           cat > .ci_dbt/profiles.yml <<EOF
           ae_stanley_tasks:
-            target: ci
+            target: dev
             outputs:
               ci:
                 type: bigquery
