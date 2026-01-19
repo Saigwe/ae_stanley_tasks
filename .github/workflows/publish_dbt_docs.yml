@@ -8,6 +8,7 @@ on:
 jobs:
   publish-docs:
     runs-on: ubuntu-latest
+
     env:
       DBT_ALLOW_PROD: "true"
 
@@ -19,22 +20,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
       - name: Install dbt
-        run: |
-          pip install dbt-core dbt-bigquery
-
-      - name: Cache dbt packages
-        uses: actions/cache@v4
-        with:
-          path: dbt_packages
-          key: dbt-packages-${{ hashFiles('packages.yml') }}
+        run: pip install dbt-core dbt-bigquery
 
       - name: Install dbt packages
         run: dbt deps
 
-      # Secure auth (no manual key writing needed)
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -43,15 +35,15 @@ jobs:
       - name: Setup gcloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      # ✅ Always explicitly create the profiles directory
-      - name: Create dbt profiles directory
-        run: mkdir -p $HOME/.dbt
+      # --- Create explicit profiles directory ---
+      - name: Create profiles directory
+        run: mkdir -p .ci_dbt
 
-      # ✅ Write profiles.yml safely
-      - name: Write dbt profiles.yml
+      # --- Write profiles.yml ---
+      - name: Write profiles.yml
         run: |
-          cat << EOF > $HOME/.dbt/profiles.yml
-          ae_stanley_igwe_monzo:
+          cat > .ci_dbt/profiles.yml <<EOF
+          ae_stanley_tasks:
             target: prod
             outputs:
               prod:
@@ -64,23 +56,16 @@ jobs:
                 threads: 4
           EOF
 
-      # ✅ Explicitly tell dbt where profiles live (no ambiguity)
-      - name: Run dbt + generate docs
-        run: |
-          dbt build --target prod --profiles-dir $HOME/.dbt
-          dbt docs generate --target prod --profiles-dir $HOME/.dbt
+      # --- DEBUG: print the file ---
+      - name: Show profiles.yml
+        run: cat .ci_dbt/profiles.yml
 
-      - name: Upload dbt docs site to GCS
-        run: |
-          gsutil -m rsync -r target/ gs://${{ secrets.GCS_BUCKET }}/docs/
+      # --- DEBUG: tell dbt exactly where profiles are ---
+      - name: dbt debug
+        run: dbt debug --profiles-dir .ci_dbt
 
-      - name: Upload versioned artifacts (for change tracking)
+      # --- Run dbt ---
+      - name: Run dbt build
         run: |
-          BRANCH="${GITHUB_REF_NAME}"
-          SHA="${GITHUB_SHA}"
-
-          gsutil -m cp \
-            target/manifest.json \
-            target/catalog.json \
-            target/run_results.json \
-            gs://${{ secrets.GCS_BUCKET }}/artifacts/$BRANCH/$SHA/
+          dbt build --target prod --profiles-dir .ci_dbt
+          dbt docs generate --target prod --profiles-dir .ci_dbt
