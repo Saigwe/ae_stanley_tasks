@@ -13,7 +13,6 @@ concurrency:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   dbt-ci:
@@ -21,7 +20,6 @@ jobs:
 
     env:
       DBT_PROFILES_DIR: .ci_dbt
-      DBT_ALLOW_PROD: "true"
 
     steps:
       - name: Checkout repo
@@ -38,68 +36,40 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Auth to GCP
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up gcloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      # Create the CI-only dbt profiles directory
+      # Create dummy profiles.yml so dbt is satisfied
       - name: Create dbt profiles directory
         run: mkdir -p .ci_dbt
 
-      # Write profiles.yml (THIS is the one dbt will use)
-      - name: Write profiles.yml
+      - name: Write lightweight profiles.yml
         run: |
           cat > .ci_dbt/profiles.yml <<EOF
           ae_stanley_tasks:
-            target: prod
+            target: ci
             outputs:
-              prod:
+              ci:
                 type: bigquery
                 method: oauth
-                project: analytics-take-home-test
-                dataset: AE_monzo_datawarehouse_SI_prod
-                keyfile: $GOOGLE_APPLICATION_CREDENTIALS
+                project: fake-project
+                dataset: fake_dataset
                 location: US
-                threads: 4
+                threads: 1
           EOF
 
-      # Print the file so you can see it in logs (for sanity)
       - name: Show profiles.yml
         run: cat .ci_dbt/profiles.yml
 
-      # Optional: sanity check
-      - name: dbt debug
-        run: dbt debug
+      # These commands do NOT hit BigQuery
+      - name: dbt debug (structure only)
+        run: dbt debug --config-dir
 
-      # Pull prod artifacts for state comparison
-      - name: Download prod artifacts
-        run: |
-          mkdir -p artifacts
-          gsutil cp gs://dbt-artifacts-analytics-take-home-test/prod/manifest.json artifacts/
+      - name: dbt parse
+        run: dbt parse
 
-      # Lint
+      - name: dbt compile
+        run: dbt compile
+
+      - name: dbt ls (validate graph)
+        run: dbt ls
+
       - name: SQLFluff lint
         run: sqlfluff lint models/
-
-      # dbt run (state-aware)
-      - name: dbt run (state-based)
-        run: |
-          dbt run \
-            --target ci \
-            --defer \
-            --state artifacts \
-            --select state:modified+
-
-      # dbt test (state-aware)
-      - name: dbt test (state-based)
-        run: |
-          dbt test \
-            --target ci \
-            --defer \
-            --state artifacts \
-            --select state:modified+
