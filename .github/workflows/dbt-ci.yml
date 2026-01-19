@@ -2,41 +2,79 @@ name: dbt CI
 
 on:
   pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: dbt-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   dbt-ci:
     runs-on: ubuntu-latest
 
+    env:
+      DBT_PROFILES_DIR: ./.dbt
+      DBT_TARGET: ci
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Auth to GCP
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Optional: sanity check
+      - name: dbt debug
+        run: dbt debug
+
+      # Pull prod artifacts for state comparison
       - name: Download prod artifacts
         run: |
-          mkdir artifacts
-          gsutil cp gs://dbt-artifacts-analytics-take-home-test/prod/manifest.json ./artifacts/
+          mkdir -p artifacts
+          gsutil cp gs://dbt-artifacts-analytics-take-home-test/prod/manifest.json artifacts/
 
-      - name: SQL lint
-        run: |
-          sqlfluff lint models/
+      # Lint
+      - name: SQLFluff lint
+        run: sqlfluff lint models/
 
+      # dbt run (state-aware)
       - name: dbt run (state-based)
         run: |
-          dbt run --defer --state ./artifacts --select state:modified+
+          dbt run \
+            --target ci \
+            --defer \
+            --state artifacts \
+            --select state:modified+
 
+      # dbt test (state-aware)
       - name: dbt test (state-based)
         run: |
-          dbt test --defer --state ./artifacts --select state:modified+
+          dbt test \
+            --target ci \
+            --defer \
+            --state artifacts \
+            --select state:modified+
