@@ -61,4 +61,4 @@ jobs:
         run: dbt ls
 
       - name: SQLFluff lint
-        run: sqlfluff lint models/
+        run: sqlfluff lint models/ --dialect bigquery
