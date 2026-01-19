@@ -57,9 +57,6 @@ jobs:
       - name: dbt parse
         run: dbt parse
 
-      - name: dbt compile
-        run: dbt compile
-
       - name: dbt ls
         run: dbt ls
 
