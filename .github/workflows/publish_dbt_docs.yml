@@ -9,9 +9,6 @@ jobs:
   publish-docs:
     runs-on: ubuntu-latest
 
-    env:
-      DBT_PROFILES_DIR: ~/.dbt
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -44,10 +41,14 @@ jobs:
       - name: Setup gcloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      # ✅ Always explicitly create the profiles directory
+      - name: Create dbt profiles directory
+        run: mkdir -p $HOME/.dbt
+
+      # ✅ Write profiles.yml safely
       - name: Write dbt profiles.yml
         run: |
-          mkdir -p ~/.dbt
-          cat << 'EOF' > $HOME/.dbt/profiles.yml
+          cat << EOF > $HOME/.dbt/profiles.yml
           ae_stanley_igwe_monzo:
             target: prod
             outputs:
@@ -61,10 +62,11 @@ jobs:
                 threads: 4
           EOF
 
+      # ✅ Explicitly tell dbt where profiles live (no ambiguity)
       - name: Run dbt + generate docs
         run: |
-          dbt build --target prod
-          dbt docs generate --target prod
+          dbt build --target prod --profiles-dir $HOME/.dbt
+          dbt docs generate --target prod --profiles-dir $HOME/.dbt
 
       - name: Upload dbt docs site to GCS
         run: |
