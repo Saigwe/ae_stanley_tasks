@@ -2,9 +2,6 @@ version: 2
 
 models:
   - name: dim_accounts_history
-    config:
-      contract:
-        enforced: true
     tags:
       - core
       - lifecycle
