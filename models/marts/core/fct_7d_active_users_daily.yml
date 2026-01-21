@@ -2,6 +2,9 @@ version: 2
 
 models:
   - name: fct_7d_active_users_daily
+    config:
+      contract:
+        enforced: true
     tags:
       - metric
       - growth
