@@ -47,21 +47,25 @@ models:
 
     columns:
       - name: account_id
+        data_type: string
         description: Unique identifier for the account.
         tests:
           - not_null
           - unique
 
       - name: user_id
+        data_type: string
         description: Unique identifier for the user who owns the account.
         tests:
           - not_null
 
       - name: account_type
+        data_type: string
         description: >
           Product type of the account.
 
       - name: account_status
+        data_type: string
         description: >
           Current status of the account derived from the most recent
           lifecycle event.
@@ -71,6 +75,7 @@ models:
               values: ['open', 'closed']
 
       - name: is_open
+        data_type: boolean
         description: >
           Convenience boolean flag indicating whether the account
           is currently open. Derived from account_status.
@@ -78,6 +83,7 @@ models:
           - not_null
 
       - name: status_updated_at
+        data_type: timestamp
         description: >
           Timestamp when the account last transitioned into its
           current status.
